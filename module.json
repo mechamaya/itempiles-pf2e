@@ -2,7 +2,7 @@
   "id": "itempiles-pf2e",
   "title": "Item Piles: PF2e",
   "description": "<p>This module adds support for the PF2e system within the Item Piles module</p>",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "compatibility": {
     "minimum": "12",
     "verified": "13",
@@ -24,7 +24,7 @@
       {
         "id": "item-piles",
         "type": "module",
-        "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/manifest.json",
+        "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json",
         "compatibility": {
           "minimum": "3.2.7",
           "verified": "3.2.7"
@@ -43,7 +43,7 @@
     ]
   },
   "url": "https://github.com/mechamaya/ItemPiles-PF2e",
-  "manifest": "https://github.com/mechamaya/ItemPiles-PF2e/releases/latest/download/manifest.json",
+  "manifest": "https://github.com/mechamaya/ItemPiles-PF2e/releases/latest/download/module.json",
   "download": "https://github.com/mechamaya/ItemPiles-PF2e/releases/latest/download/module.zip",
   "readme": "https://github.com/mechamaya/ItemPiles-PF2e/blob/master/README.md",
   "bugs": "https://github.com/mechamaya/ItemPiles-PF2e/issues"
