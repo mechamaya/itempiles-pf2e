@@ -48,20 +48,6 @@ Hooks.once("item-piles-ready", async () => {
 
 		"PREVIEW_ITEM_TRANSFORMER": (item) => {
 			if (game.user.isGM || item?.identificationStatus !== "unidentified") return item;
-			new TJSDialog({
-				title: item.name,
-				content: {
-					class: BasicItemDialog,
-					props: {
-						item
-					}
-				}
-			}, {
-				classes: ["pf2e item sheet dorako-ui"],
-				resizable: false,
-				height: "auto",
-				width: "auto"
-			}).render(true);
 			return false;
 		},
 
