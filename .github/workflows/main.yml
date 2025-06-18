@@ -23,7 +23,7 @@ jobs:
           
       - name: Get Module Title
         id: title
-        run: echo "title=${{ fromJson(steps.set_var.outputs.PACKAGE_JSON).title }}" >> "$GITHUB_OUTPUT"
+        run: echo "title=${{fromJson(steps.set_var.outputs.PACKAGE_JSON).title}}" >> "$GITHUB_OUTPUT"
 
       # Substitute the Manifest and Download URLs in the `module.json`.
       - name: Substitute Manifest and Download Links For Versioned Ones
@@ -32,9 +32,9 @@ jobs:
         with:
           files: module.json
         env:
-          version: ${{ steps.get-version.outputs.version-without-v }}
-          manifest: https://github.com/${{github.repository }}/releases/latest/download/module.json
-          download: https://github.com/${{github.repository }}/releases/download/${{github.event.release.tag_name}}/module.zip
+          version: ${{steps.get-version.outputs.version-without-v}}
+          manifest: https://github.com/${{github.repository}}/releases/latest/download/module.json
+          download: https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.zip
 
       - name: Create Zip
         run: zip -r9 ./module.zip . -x '*.git*'
@@ -56,9 +56,9 @@ jobs:
         uses: JamesIves/fetch-api-data-action@v2
         with:
             endpoint: https://api.foundryvtt.com/_api/packages/release_version/
-            configuration: '{ "method": "POST", "headers": { "Content-Type": "application/json", "Authorization": "${{ secrets.PACKAGE_TOKEN }}" }, "body": { "id": "itempiles-pf2e", "dry-run": false, "release": { "version": "${{steps.get-version.outputs.version-without-v}}", "manifest": "https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.json", "notes": "https://github.com/${{github.repository}}/releases/tag/${{github.event.release.tag_name}}", "compatibility": { "minimum": "12", "verified": "13", "maximum": "13" } } } }'
+            configuration: '{ "method": "POST", "headers": { "Content-Type": "application/json", "Authorization": "${{secrets.PACKAGE_TOKEN}}" }, "body": { "id": "itempiles-pf2e", "dry-run": false, "release": { "version": "${{steps.get-version.outputs.version-without-v}}", "manifest": "https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.json", "notes": "https://github.com/${{github.repository}}/releases/tag/${{github.event.release.tag_name}}", "compatibility": { "minimum": "12", "verified": "13", "maximum": "13" } } } }'
       
       #  uses: cs96and/FoundryVTT-release-package@v1.0.2
       #  with:
-      #    package-token: ${{ secrets.PACKAGE_TOKEN }}
+      #    package-token: ${{secrets.PACKAGE_TOKEN}}
       #    manifest-url: https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.json
