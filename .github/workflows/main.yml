@@ -51,8 +51,13 @@ jobs:
           artifacts: './module.json, ./module.zip'
 
       # Publish to FoundryVTT
-      #- name: Publish FoundryVTT Package
-      #  if: ${{!github.event.release.prerelease}}
+      - name: Publish FoundryVTT Package
+        if: ${{!github.event.release.prerelease}}
+        uses: JamesIves/fetch-api-data-action@v2
+        with:
+            endpoint: https://api.foundryvtt.com/_api/packages/release_version/
+            configuration: '{ "method": "POST", "headers": { "Content-Type": "application/json", "Authorization": "${{ secrets.PACKAGE_TOKEN }}" }, "body": { "id": "itempiles-pf2e", "dry-run": true, "release": { "version": "${{steps.get-version.outputs.version-without-v}}", "manifest": "https://github.com/${{github.repository}}/releases/download/${{github.event.release.tag_name}}/module.json", "notes": "https://github.com/${{github.repository}}/releases/tag/${{github.event.release.tag_name}}", "compatibility": { "minimum": "12", "verified": "12", "maximum": "13" } } } }'
+      
       #  uses: cs96and/FoundryVTT-release-package@v1.0.2
       #  with:
       #    package-token: ${{ secrets.PACKAGE_TOKEN }}
