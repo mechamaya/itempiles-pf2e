@@ -130,7 +130,26 @@ Hooks.once("item-piles-ready", async () => {
 
 		"VAULT_STYLES": [],
 
-		"SYSTEM_HOOKS": () => {}
+		"SYSTEM_HOOKS": () => {},
+
+		"SHEET_OVERRIDES": () => {
+			const actorSheetOverride = game.itempiles.CONSTANTS.IS_V13
+				? `CONFIG.Actor.sheetClasses.character["pf2e.CharacterSheetPF2e"].cls.prototype.render`
+				: `ActorSheet.prototype.render`
+
+			libWrapper.register("itempiles-pf2e", actorSheetOverride, function (wrapped, forced, options, ...args) {
+				const renderItemPileInterface = Hooks.call(game.itempiles.CONSTANTS.HOOKS.PRE_RENDER_SHEET, this.document, forced, options) === false;
+				if (this._state > Application.RENDER_STATES.NONE) {
+					if (renderItemPileInterface) {
+						wrapped(forced, options, ...args)
+					} else {
+						return wrapped(forced, options, ...args)
+					}
+				}
+				if (renderItemPileInterface) return;
+				return wrapped(forced, options, ...args);
+			}, "MIXED");
+		}
 	}
 
 	await game.itempiles.API.addSystemIntegration(data);
