@@ -1,3 +1,7 @@
+# v1.0.9
+- (Haxxer) Updated sheet overrides to override all classes
+- This should fix an issue in v13 where merchant sheet not overriding default loot sheet when actor from journal or sidebar.
+
 # v1.0.8
 - (Haxxer) Fixes v13 PF2e not rendering Item Piles sheets
 
