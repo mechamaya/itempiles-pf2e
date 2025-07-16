@@ -133,11 +133,13 @@ Hooks.once("item-piles-ready", async () => {
 		"SYSTEM_HOOKS": () => {},
 
 		"SHEET_OVERRIDES": () => {
-			const actorSheetOverride = game.itempiles.CONSTANTS.IS_V13
-				? `CONFIG.Actor.sheetClasses.character["pf2e.CharacterSheetPF2e"].cls.prototype.render`
-				: `ActorSheet.prototype.render`
+			const sheetOverrides = Object.keys(CONFIG.Actor.sheetClasses).map(str => {
+			    return Object.keys(CONFIG.Actor.sheetClasses[str]).map(sheet => {
+			        return `CONFIG.Actor.sheetClasses.${str}.["${sheet}"].cls.prototype.render`;
+			    })
+			}).flat()
 
-			libWrapper.register("itempiles-pf2e", actorSheetOverride, function (wrapped, forced, options, ...args) {
+			const method = function (wrapped, forced, options, ...args) {
 				const renderItemPileInterface = Hooks.call(game.itempiles.CONSTANTS.HOOKS.PRE_RENDER_SHEET, this.document, forced, options) === false;
 				if (this._state > Application.RENDER_STATES.NONE) {
 					if (renderItemPileInterface) {
@@ -148,7 +150,11 @@ Hooks.once("item-piles-ready", async () => {
 				}
 				if (renderItemPileInterface) return;
 				return wrapped(forced, options, ...args);
-			}, "MIXED");
+			};
+
+			for(const override of sheetOverrides){
+				libWrapper.register("itempiles-pf2e", override, method, "MIXED");
+			}
 		}
 	}
 
