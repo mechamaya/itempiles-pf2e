@@ -130,32 +130,7 @@ Hooks.once("item-piles-ready", async () => {
 
 		"VAULT_STYLES": [],
 
-		"SYSTEM_HOOKS": () => {},
-
-		"SHEET_OVERRIDES": () => {
-			const sheetOverrides = Object.keys(CONFIG.Actor.sheetClasses).map(str => {
-			    return Object.keys(CONFIG.Actor.sheetClasses[str]).map(sheet => {
-			        return `CONFIG.Actor.sheetClasses.${str}.["${sheet}"].cls.prototype.render`;
-			    })
-			}).flat()
-
-			const method = function (wrapped, forced, options, ...args) {
-				const renderItemPileInterface = Hooks.call(game.itempiles.CONSTANTS.HOOKS.PRE_RENDER_SHEET, this.document, forced, options) === false;
-				if (this._state > Application.RENDER_STATES.NONE) {
-					if (renderItemPileInterface) {
-						wrapped(forced, options, ...args)
-					} else {
-						return wrapped(forced, options, ...args)
-					}
-				}
-				if (renderItemPileInterface) return;
-				return wrapped(forced, options, ...args);
-			};
-
-			for(const override of sheetOverrides){
-				libWrapper.register("itempiles-pf2e", override, method, "MIXED");
-			}
-		}
+		"SYSTEM_HOOKS": () => {}
 	}
 
 	await game.itempiles.API.addSystemIntegration(data);
