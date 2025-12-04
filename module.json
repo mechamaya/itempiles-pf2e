@@ -2,7 +2,7 @@
   "id": "itempiles-pf2e",
   "title": "Item Piles: PF2e",
   "description": "This module adds support for the PF2e system within the Item Piles module",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "compatibility": {
     "minimum": "12",
     "verified": "13",
@@ -27,7 +27,7 @@
         "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json",
         "compatibility": {
           "minimum": "3.2.15",
-          "verified": "3.2.16"
+          "verified": "3.2.27"
         }
       }
     ],
@@ -37,7 +37,7 @@
         "type": "system",
         "compatibility": {
           "minimum": "6",
-          "verified": "7.2.2"
+          "verified": "7.8.0"
         }
       }
     ]

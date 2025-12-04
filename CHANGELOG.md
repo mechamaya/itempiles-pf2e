@@ -1,3 +1,6 @@
+# v1.0.10
+- Removes redundant Sheet Overrides, should stop warning from popping up when selecting item piles actors.
+
 # v1.0.9
 - (Haxxer) Updated sheet overrides to override all classes
 - This should fix an issue in v13 where merchant sheet not overriding default loot sheet when actor from journal or sidebar.
