@@ -165,13 +165,13 @@ Hooks.once("item-piles-ready", async () => {
 				uuid: "Compendium.world.itempiles-sf2e.Item.bPFgbHISokpapsxZ"
 			}
 		}],
+		"CURRENCY_DECIMAL_DIGITS": 1
 	}
-	
+
 	if (game.system.id === 'pf2e') {
 		await game.itempiles.API.addSystemIntegration(pf2eData);
 	}
 	else if (game.system.id === 'sf2e') {
 		await game.itempiles.API.addSystemIntegration(sf2eData);
-		game.itempiles.API.setCurrencyDecimalDigits(1)
 	}
 });
