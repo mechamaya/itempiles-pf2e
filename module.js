@@ -155,15 +155,17 @@ Hooks.once("item-piles-ready", async () => {
 			},
 			primary: true,
 			exchangeRate: 1
-		}],
-
-		"SECONDARY_CURRENCIES": [ {
+		},
+		{
+			type: "item",
 			name: "UPB",
 			img: "systems/pf2e/icons/equipment/treasure/currency/upb.webp",
 			abbreviation: "{#}upb",
 			data: {
 				uuid: "Compendium.world.itempiles-sf2e.Item.bPFgbHISokpapsxZ"
-			}
+			},
+			primary: false,
+			exchangeRate: 1
 		}],
 		"CURRENCY_DECIMAL_DIGITS": 1
 	}
