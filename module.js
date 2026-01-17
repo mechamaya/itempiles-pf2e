@@ -1,8 +1,8 @@
 Hooks.once("item-piles-ready", async () => {
 
-	const data = {
+	const pf2eData = {
 
-		"VERSION": "1.0.5",
+		"VERSION": "1.0.10",
 
 		// The actor class type is the type of actor that will be used for the default item pile actor that is created on first item drop.
 		"ACTOR_CLASS_TYPE": "loot",
@@ -133,5 +133,45 @@ Hooks.once("item-piles-ready", async () => {
 		"SYSTEM_HOOKS": () => {}
 	}
 
-	await game.itempiles.API.addSystemIntegration(data);
+	const sf2eData = {
+		...pf2eData,
+		// This function is an optional system handler that specifically transforms an item's price into a more unified numeric format
+		"ITEM_COST_TRANSFORMER": (item) => {
+			const itemCost = foundry.utils.getProperty(item, "system.price");
+			const { copperValue } = new game.pf2e.Coins(itemCost?.value ?? {});
+			return copperValue / 10;
+		},
+
+		// Currencies in item piles is a versatile system that can accept actor attributes (a number field on the actor's sheet) or items (actual items in their inventory)
+		// In the case of attributes, the path is relative to the "actor.system"
+		// In the case of items, it is recommended you export the item with `.toObject()`, put it into `data.item`, and strip out any module data
+		"CURRENCIES": [{
+			type: "item",
+			name: "Credits",
+			img: "icons/sundries/gaming/playing-cards-grey.webp",
+			abbreviation: "{#}cr",
+			data: {
+				uuid: "Compendium.world.itempiles-sf2e.Item.65kZp10zJxzsj0mt"
+			},
+			primary: true,
+			exchangeRate: 1
+		}],
+
+		"SECONDARY_CURRENCIES": [ {
+			name: "UPB",
+			img: "systems/pf2e/icons/equipment/treasure/currency/upb.webp",
+			abbreviation: "{#}upb",
+			data: {
+				uuid: "Compendium.world.itempiles-sf2e.Item.bPFgbHISokpapsxZ"
+			}
+		}],
+	}
+	
+	if (game.system.id === 'pf2e') {
+		await game.itempiles.API.addSystemIntegration(pf2eData);
+	}
+	else if (game.system.id === 'sf2e') {
+		await game.itempiles.API.addSystemIntegration(sf2eData);
+		game.itempiles.API.setCurrencyDecimalDigits(1)
+	}
 });
