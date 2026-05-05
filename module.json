@@ -5,8 +5,8 @@
   "version": "1.0.10",
   "compatibility": {
     "minimum": "12",
-    "verified": "13",
-    "maximum": "13"
+    "verified": "14",
+    "maximum": "14"
   },
   "authors": [
     {
@@ -27,7 +27,7 @@
         "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json",
         "compatibility": {
           "minimum": "3.2.15",
-          "verified": "3.2.27"
+          "verified": "3.2.32"
         }
       }
     ],
@@ -37,7 +37,7 @@
         "type": "system",
         "compatibility": {
           "minimum": "6",
-          "verified": "7.8.0"
+          "verified": "8.1.1"
         }
       }
     ]
