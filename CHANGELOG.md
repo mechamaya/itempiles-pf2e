@@ -1,3 +1,8 @@
+# v1.1.0
+- Verified for v14 compatibility.
+- Core Item Piles has dropped support for v12, so I have has as well.
+- This module continues to only work for PF2e. SF2e support has hit a roadblock.
+
 # v1.0.10
 - Removes redundant Sheet Overrides, should stop warning from popping up when selecting item piles actors.
 
