@@ -151,7 +151,7 @@ Hooks.once("item-piles-ready", async () => {
 			img: "icons/sundries/gaming/playing-cards-grey.webp",
 			abbreviation: "{#}cr",
 			data: {
-				uuid: "Compendium.world.itempiles-sf2e.Item.65kZp10zJxzsj0mt"
+				uuid: "Compendium.sf2e.equipment-srd.penfpVFkOqZYpmkU"
 			},
 			primary: true,
 			exchangeRate: 1
@@ -162,7 +162,7 @@ Hooks.once("item-piles-ready", async () => {
 			img: "systems/pf2e/icons/equipment/treasure/currency/upb.webp",
 			abbreviation: "{#}upb",
 			data: {
-				uuid: "Compendium.world.itempiles-sf2e.Item.bPFgbHISokpapsxZ"
+				uuid: "Compendium.sf2e.equipment-srd.ALqTYbYspMMrJIDs"
 			},
 			primary: false,
 			exchangeRate: 1
