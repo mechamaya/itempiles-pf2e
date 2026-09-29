@@ -1,3 +1,10 @@
+# v2.0.0
+- Finally, added SF2e support!
+- There may still be some limitations with credsticks, but most of these have been worked around.
+    - For example, you cannot drop a credstick onto the canvas or onto an existing Item Pile, rather you must "Add Currency" to an existing Item Pile.
+- Merchants should now support SF2e currencies, including using UBPs to purchase.
+    - If you don't want a merchant to accept UPBs as currency, you can edit that merchant's currency configuration.
+
 # v1.1.0
 - Verified for v14 compatibility.
 - Core Item Piles has dropped support for v12, so I have has as well.
