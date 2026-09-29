@@ -138,6 +138,13 @@ Hooks.once("item-piles-ready", async () => {
 
 		"VERSION": "1.1.1",
 
+		// Credsticks and UPBs are handled as attribute currencies, so hide the underlying items from the pile inventory
+		"ITEM_FILTERS": [
+			...pf2eData.ITEM_FILTERS,
+			{ "path": "system.category", "filters": "credstick" },
+			{ "path": "system.slug", "filters": "upb" }
+		],
+
 		// This function is an optional system handler that specifically transforms an item's price into a more unified numeric format
 		"ITEM_COST_TRANSFORMER": (item) => {
 			const itemCost = foundry.utils.getProperty(item, "system.price");
