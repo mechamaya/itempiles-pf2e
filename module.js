@@ -160,7 +160,7 @@ Hooks.once("item-piles-ready", async () => {
 				img: "icons/sundries/gaming/playing-cards-grey.webp",
 				abbreviation: "{#}cr",
 				data: {
-					path: "inventory.currency.credits",
+					path: SF2E_CREDITS_PATH,
 				},
 				primary: true,
 				exchangeRate: 1
@@ -215,12 +215,10 @@ function registerSf2eCredstickDropMessage() {
 	});
 }
 
-// Item Piles writes attribute currencies with actor.update({ [path]: newTotal }). These paths are not part of the actor schema,
-// so the data doesn't get committed to the actor. So instead we will pull them out before the update and apply it through the
+// Item Piles writes attribute currencies with actor.update({ [path]: newTotal }). This path is not part of the actor schema,
+// so the data doesn't get committed to the actor. So instead we will pull it out before the update and apply it through the
 // SF2e inventory API instead.
-const SF2E_CURRENCY_PATHS = {
-	"inventory.currency.credits": "credits"
-};
+const SF2E_CREDITS_PATH = "inventory.currency.credits";
 
 function patchSf2eCurrencyUpdates() {
 	// libWrapper lets this wrapper coexist with other modules wrapping the same method, and reports any conflicts
@@ -236,37 +234,27 @@ function patchSf2eCurrencyUpdates() {
 	};
 }
 
-// Passes every update through untouched unless it contains one of the SF2E_CURRENCY_PATHS
+// Passes every update through untouched unless it sets the credits path
 async function sf2eCurrencyUpdateWrapper(wrapped, data = {}, operation = {}) {
 	if (!this.inventory || foundry.utils.getType(data) !== "Object") {
 		return wrapped(data, operation);
 	}
 
-	const additions = {};
-	const removals = {};
-	let remaining = data;
-	for (const [path, denomination] of Object.entries(SF2E_CURRENCY_PATHS)) {
-		const newValue = path in data ? data[path] : foundry.utils.getProperty(data, path);
-		if (newValue === undefined) continue;
+	// Item Piles may send the path either as a dotted key or as nested objects
+	const newCredits = SF2E_CREDITS_PATH in data ? data[SF2E_CREDITS_PATH] : foundry.utils.getProperty(data, SF2E_CREDITS_PATH);
+	if (newCredits === undefined) return wrapped(data, operation);
 
-		if (remaining === data) remaining = foundry.utils.deepClone(data);
-		delete remaining[path];
-		if (remaining.inventory?.currency) delete remaining.inventory.currency[denomination];
+	const delta = Math.max(0, Math.floor(Number(newCredits) || 0)) - this.inventory.currency.credits;
+	if (delta > 0) await this.inventory.addCurrency({ credits: delta });
+	else if (delta < 0) await this.inventory.removeCurrency({ credits: -delta }, { byValue: false });
 
-		const delta = Math.max(0, Math.floor(Number(newValue) || 0)) - this.inventory.currency[denomination];
-		if (delta > 0) additions[denomination] = delta;
-		else if (delta < 0) removals[denomination] = -delta;
-	}
-
-	if (remaining === data) return wrapped(data, operation);
-
-	if (!foundry.utils.isEmpty(removals)) await this.inventory.removeCurrency(removals, { byValue: false });
-	if (!foundry.utils.isEmpty(additions)) await this.inventory.addCurrency(additions);
-
+	// Pass on the rest of the update, if there is anything left
+	const remaining = foundry.utils.deepClone(data);
+	delete remaining[SF2E_CREDITS_PATH];
+	delete remaining.inventory?.currency?.credits;
 	if (remaining.inventory?.currency && foundry.utils.isEmpty(remaining.inventory.currency)) delete remaining.inventory.currency;
 	if (remaining.inventory && foundry.utils.isEmpty(remaining.inventory)) delete remaining.inventory;
-	if (foundry.utils.isEmpty(remaining)) return this;
-	return wrapped(remaining, operation);
+	return foundry.utils.isEmpty(remaining) ? this : wrapped(remaining, operation);
 }
 
 // Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e credit changes only touch
@@ -274,23 +262,21 @@ async function sf2eCurrencyUpdateWrapper(wrapped, data = {}, operation = {}) {
 function registerSf2eCurrencyRefresh() {
 	const pendingRefreshes = new Map();
 
-	const refreshCurrencies = (item) => {
+	const refreshCredits = (item) => {
 		const actor = item.parent;
 		if (!(actor instanceof Actor) || item.type !== "treasure" || item.system.category !== "credstick") return;
 
-		// A single currency change can create, update and delete several items, so only refresh once per actor
+		// A single credits change can create, update and delete several credsticks, so only refresh once per actor
 		if (pendingRefreshes.has(actor.uuid)) return;
 		pendingRefreshes.set(actor.uuid, setTimeout(() => {
 			pendingRefreshes.delete(actor.uuid);
 			const data = {};
-			for (const [path, denomination] of Object.entries(SF2E_CURRENCY_PATHS)) {
-				foundry.utils.setProperty(data, path, actor.inventory?.currency[denomination] ?? 0);
-			}
+			foundry.utils.setProperty(data, SF2E_CREDITS_PATH, actor.inventory?.currency.credits ?? 0);
 			actor.render(false, { action: "update", data });
 		}));
 	};
 
-	Hooks.on("createItem", refreshCurrencies);
-	Hooks.on("updateItem", refreshCurrencies);
-	Hooks.on("deleteItem", refreshCurrencies);
+	Hooks.on("createItem", refreshCredits);
+	Hooks.on("updateItem", refreshCredits);
+	Hooks.on("deleteItem", refreshCredits);
 }
