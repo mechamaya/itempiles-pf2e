@@ -138,7 +138,7 @@ Hooks.once("item-piles-ready", async () => {
 
 		"VERSION": "1.1.1",
 
-		// Credsticks and UPBs are handled as attribute currencies, so hide the underlying items from the pile inventory
+		// Credsticks and UPBs are handled as attribute currencies, so we need to hide the underlying items from the pile inventory
 		"ITEM_FILTERS": [
 			...pf2eData.ITEM_FILTERS,
 			{ "path": "system.category", "filters": "credstick" },
@@ -152,9 +152,8 @@ Hooks.once("item-piles-ready", async () => {
 			return copperValue / 10;
 		},
 
-		// Currencies in item piles is a versatile system that can accept actor attributes (a number field on the actor's sheet) or items (actual items in their inventory)
-		// In the case of attributes, the path is relative to the "actor.system"
-		// In the case of items, it is recommended you export the item with `.toObject()`, put it into `data.item`, and strip out any module data
+		// SF2e stores credits as the price of credstick items and UPBs as treasure items, so both are exposed as attributes that
+		// read from the actor's inventory getter. Writes to these paths are intercepted by patchSf2eCurrencyUpdates below.
 		"CURRENCIES": [
 			{
 				type: "attribute",
@@ -186,6 +185,80 @@ Hooks.once("item-piles-ready", async () => {
 		await game.itempiles.API.addSystemIntegration(pf2eData);
 	}
 	else if (game.system.id === 'sf2e') {
+		patchSf2eCurrencyUpdates();
+		registerSf2eCurrencyRefresh();
 		await game.itempiles.API.addSystemIntegration(sf2eData);
 	}
 });
+
+// Item Piles writes attribute currencies with actor.update({ [path]: newTotal }). These paths are not part of the actor schema,
+// so the data doesn't get committed to the actor. So instead we will pull them out before the update and apply it through the
+// SF2e inventory API instead.
+const SF2E_CURRENCY_PATHS = {
+	"inventory.currency.credits": "credits",
+	"inventory.currency.upb": "upb"
+};
+
+function patchSf2eCurrencyUpdates() {
+	const ActorClass = CONFIG.Actor.documentClass;
+	const originalUpdate = ActorClass.prototype.update;
+
+	ActorClass.prototype.update = async function (data = {}, operation = {}) {
+		if (!this.inventory || foundry.utils.getType(data) !== "Object") {
+			return originalUpdate.call(this, data, operation);
+		}
+
+		const additions = {};
+		const removals = {};
+		let remaining = data;
+		for (const [path, denomination] of Object.entries(SF2E_CURRENCY_PATHS)) {
+			const newValue = path in data ? data[path] : foundry.utils.getProperty(data, path);
+			if (newValue === undefined) continue;
+
+			if (remaining === data) remaining = foundry.utils.deepClone(data);
+			delete remaining[path];
+			if (remaining.inventory?.currency) delete remaining.inventory.currency[denomination];
+
+			const delta = Math.max(0, Math.floor(Number(newValue) || 0)) - this.inventory.currency[denomination];
+			if (delta > 0) additions[denomination] = delta;
+			else if (delta < 0) removals[denomination] = -delta;
+		}
+
+		if (remaining === data) return originalUpdate.call(this, data, operation);
+
+		if (!foundry.utils.isEmpty(removals)) await this.inventory.removeCurrency(removals, { byValue: false });
+		if (!foundry.utils.isEmpty(additions)) await this.inventory.addCurrency(additions);
+
+		if (remaining.inventory?.currency && foundry.utils.isEmpty(remaining.inventory.currency)) delete remaining.inventory.currency;
+		if (remaining.inventory && foundry.utils.isEmpty(remaining.inventory)) delete remaining.inventory;
+		if (foundry.utils.isEmpty(remaining)) return this;
+		return originalUpdate.call(this, remaining, operation);
+	};
+}
+
+// Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e currency changes only touch
+// currency items. So we need to refresh the currency totals when these items change.
+function registerSf2eCurrencyRefresh() {
+	const pendingRefreshes = new Map();
+
+	const refreshCurrencies = (item) => {
+		const actor = item.parent;
+		if (!(actor instanceof Actor) || item.type !== "treasure") return;
+		if (item.system.category !== "credstick" && item.system.slug !== "upb") return;
+
+		// A single currency change can create, update and delete several items, so only refresh once per actor
+		if (pendingRefreshes.has(actor.uuid)) return;
+		pendingRefreshes.set(actor.uuid, setTimeout(() => {
+			pendingRefreshes.delete(actor.uuid);
+			const data = {};
+			for (const [path, denomination] of Object.entries(SF2E_CURRENCY_PATHS)) {
+				foundry.utils.setProperty(data, path, actor.inventory?.currency[denomination] ?? 0);
+			}
+			actor.render(false, { action: "update", data });
+		}));
+	};
+
+	Hooks.on("createItem", refreshCurrencies);
+	Hooks.on("updateItem", refreshCurrencies);
+	Hooks.on("deleteItem", refreshCurrencies);
+}
