@@ -135,6 +135,9 @@ Hooks.once("item-piles-ready", async () => {
 
 	const sf2eData = {
 		...pf2eData,
+
+		"VERSION": "1.1.1",
+
 		// This function is an optional system handler that specifically transforms an item's price into a more unified numeric format
 		"ITEM_COST_TRANSFORMER": (item) => {
 			const itemCost = foundry.utils.getProperty(item, "system.price");
@@ -160,7 +163,7 @@ Hooks.once("item-piles-ready", async () => {
 			{
 				type: "attribute",
 				name: "UPBs",
-				img: "systems/pf2e/icons/equipment/treasure/currency/upb.webp",
+				img: "systems/sf2e/icons/equipment/treasure/currency/upb.webp",
 				abbreviation: "{#}upb",
 				data: {
 					path: "inventory.currency.upb",
