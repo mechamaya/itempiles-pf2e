@@ -31,6 +31,13 @@
         }
       }
     ],
+    "recommends": [
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "manifest": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json"
+      }
+    ],
     "systems": [
       {
         "id": "pf2e",

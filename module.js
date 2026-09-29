@@ -200,40 +200,50 @@ const SF2E_CURRENCY_PATHS = {
 };
 
 function patchSf2eCurrencyUpdates() {
+	// libWrapper lets this wrapper coexist with other modules wrapping the same method, and reports any conflicts
+	if (game.modules.get("lib-wrapper")?.active) {
+		libWrapper.register("itempiles-pf2e", "CONFIG.Actor.documentClass.prototype.update", sf2eCurrencyUpdateWrapper, "MIXED");
+		return;
+	}
+
 	const ActorClass = CONFIG.Actor.documentClass;
 	const originalUpdate = ActorClass.prototype.update;
-
-	ActorClass.prototype.update = async function (data = {}, operation = {}) {
-		if (!this.inventory || foundry.utils.getType(data) !== "Object") {
-			return originalUpdate.call(this, data, operation);
-		}
-
-		const additions = {};
-		const removals = {};
-		let remaining = data;
-		for (const [path, denomination] of Object.entries(SF2E_CURRENCY_PATHS)) {
-			const newValue = path in data ? data[path] : foundry.utils.getProperty(data, path);
-			if (newValue === undefined) continue;
-
-			if (remaining === data) remaining = foundry.utils.deepClone(data);
-			delete remaining[path];
-			if (remaining.inventory?.currency) delete remaining.inventory.currency[denomination];
-
-			const delta = Math.max(0, Math.floor(Number(newValue) || 0)) - this.inventory.currency[denomination];
-			if (delta > 0) additions[denomination] = delta;
-			else if (delta < 0) removals[denomination] = -delta;
-		}
-
-		if (remaining === data) return originalUpdate.call(this, data, operation);
-
-		if (!foundry.utils.isEmpty(removals)) await this.inventory.removeCurrency(removals, { byValue: false });
-		if (!foundry.utils.isEmpty(additions)) await this.inventory.addCurrency(additions);
-
-		if (remaining.inventory?.currency && foundry.utils.isEmpty(remaining.inventory.currency)) delete remaining.inventory.currency;
-		if (remaining.inventory && foundry.utils.isEmpty(remaining.inventory)) delete remaining.inventory;
-		if (foundry.utils.isEmpty(remaining)) return this;
-		return originalUpdate.call(this, remaining, operation);
+	ActorClass.prototype.update = function (...args) {
+		return sf2eCurrencyUpdateWrapper.call(this, originalUpdate.bind(this), ...args);
 	};
+}
+
+// Passes every update through untouched unless it contains one of the SF2E_CURRENCY_PATHS
+async function sf2eCurrencyUpdateWrapper(wrapped, data = {}, operation = {}) {
+	if (!this.inventory || foundry.utils.getType(data) !== "Object") {
+		return wrapped(data, operation);
+	}
+
+	const additions = {};
+	const removals = {};
+	let remaining = data;
+	for (const [path, denomination] of Object.entries(SF2E_CURRENCY_PATHS)) {
+		const newValue = path in data ? data[path] : foundry.utils.getProperty(data, path);
+		if (newValue === undefined) continue;
+
+		if (remaining === data) remaining = foundry.utils.deepClone(data);
+		delete remaining[path];
+		if (remaining.inventory?.currency) delete remaining.inventory.currency[denomination];
+
+		const delta = Math.max(0, Math.floor(Number(newValue) || 0)) - this.inventory.currency[denomination];
+		if (delta > 0) additions[denomination] = delta;
+		else if (delta < 0) removals[denomination] = -delta;
+	}
+
+	if (remaining === data) return wrapped(data, operation);
+
+	if (!foundry.utils.isEmpty(removals)) await this.inventory.removeCurrency(removals, { byValue: false });
+	if (!foundry.utils.isEmpty(additions)) await this.inventory.addCurrency(additions);
+
+	if (remaining.inventory?.currency && foundry.utils.isEmpty(remaining.inventory.currency)) delete remaining.inventory.currency;
+	if (remaining.inventory && foundry.utils.isEmpty(remaining.inventory)) delete remaining.inventory;
+	if (foundry.utils.isEmpty(remaining)) return this;
+	return wrapped(remaining, operation);
 }
 
 // Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e currency changes only touch
