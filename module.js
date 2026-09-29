@@ -136,13 +136,12 @@ Hooks.once("item-piles-ready", async () => {
 	const sf2eData = {
 		...pf2eData,
 
-		"VERSION": "1.1.1",
+		"VERSION": "1.1.4",
 
-		// Credsticks and UPBs are handled as attribute currencies, so we need to hide the underlying items from the pile inventory
+		// Credsticks are handled as an attribute currency, so we need to hide the underlying items from the pile inventory
 		"ITEM_FILTERS": [
 			...pf2eData.ITEM_FILTERS,
-			{ "path": "system.category", "filters": "credstick" },
-			{ "path": "system.slug", "filters": "upb" }
+			{ "path": "system.category", "filters": "credstick" }
 		],
 
 		// This function is an optional system handler that specifically transforms an item's price into a more unified numeric format
@@ -152,8 +151,8 @@ Hooks.once("item-piles-ready", async () => {
 			return copperValue / 10;
 		},
 
-		// SF2e stores credits as the price of credstick items and UPBs as treasure items, so both are exposed as attributes that
-		// read from the actor's inventory getter. Writes to these paths are intercepted by patchSf2eCurrencyUpdates below.
+		// SF2e stores credits as the price of credstick items, so they are exposed as an attribute instead. Writes to this path are
+		// intercepted by patchSf2eCurrencyUpdates below.
 		"CURRENCIES": [
 			{
 				type: "attribute",
@@ -167,12 +166,23 @@ Hooks.once("item-piles-ready", async () => {
 				exchangeRate: 1
 			},
 			{
-				type: "attribute",
+				type: "item",
 				name: "UPBs",
 				img: "systems/sf2e/icons/equipment/treasure/currency/upb.webp",
 				abbreviation: "{#}upb",
 				data: {
-					path: "inventory.currency.upb",
+					item: {
+						name: "UPB",
+						type: "treasure",
+						img: "systems/sf2e/icons/equipment/treasure/currency/upb.webp",
+						system: {
+							slug: "upb",
+							category: "material",
+							bulk: { value: 1 },
+							price: { value: { sp: 1 }, per: 1 },
+							quantity: 1
+						}
+					}
 				},
 				primary: false,
 				exchangeRate: 1
@@ -195,8 +205,7 @@ Hooks.once("item-piles-ready", async () => {
 // so the data doesn't get committed to the actor. So instead we will pull them out before the update and apply it through the
 // SF2e inventory API instead.
 const SF2E_CURRENCY_PATHS = {
-	"inventory.currency.credits": "credits",
-	"inventory.currency.upb": "upb"
+	"inventory.currency.credits": "credits"
 };
 
 function patchSf2eCurrencyUpdates() {
@@ -246,15 +255,14 @@ async function sf2eCurrencyUpdateWrapper(wrapped, data = {}, operation = {}) {
 	return wrapped(remaining, operation);
 }
 
-// Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e currency changes only touch
-// currency items. So we need to refresh the currency totals when these items change.
+// Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e credit changes only touch
+// credstick items. So we need to refresh the credit totals when these items change.
 function registerSf2eCurrencyRefresh() {
 	const pendingRefreshes = new Map();
 
 	const refreshCurrencies = (item) => {
 		const actor = item.parent;
-		if (!(actor instanceof Actor) || item.type !== "treasure") return;
-		if (item.system.category !== "credstick" && item.system.slug !== "upb") return;
+		if (!(actor instanceof Actor) || item.type !== "treasure" || item.system.category !== "credstick") return;
 
 		// A single currency change can create, update and delete several items, so only refresh once per actor
 		if (pendingRefreshes.has(actor.uuid)) return;
