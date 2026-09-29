@@ -197,9 +197,23 @@ Hooks.once("item-piles-ready", async () => {
 	else if (game.system.id === 'sf2e') {
 		patchSf2eCurrencyUpdates();
 		registerSf2eCurrencyRefresh();
+		registerSf2eCredstickDropMessage();
 		await game.itempiles.API.addSystemIntegration(sf2eData);
 	}
 });
+
+// Credsticks are hidden by the item filters so they do not show up in merchant inventories, but this also stops them from
+// being dropped. Rather than Item Piles' generic "You cannot drop" error, this gives a bespoke notification to inform
+// players how to place credits into a pile instead.
+function registerSf2eCredstickDropMessage() {
+	Hooks.on("item-piles-preDropItemDetermined", (source, target, itemData) => {
+		if (game.user.isGM) return;
+		const item = itemData?.item;
+		if (item?.type !== "treasure" || item.system?.category !== "credstick") return;
+		ui.notifications.warn("Credsticks can't be dropped into an Item Pile. To place credits into an item pile, open the pile and click \"Add currency\".");
+		return false;
+	});
+}
 
 // Item Piles writes attribute currencies with actor.update({ [path]: newTotal }). These paths are not part of the actor schema,
 // so the data doesn't get committed to the actor. So instead we will pull them out before the update and apply it through the
