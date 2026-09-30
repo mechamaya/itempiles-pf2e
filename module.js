@@ -151,8 +151,20 @@ Hooks.once("item-piles-ready", async () => {
 			return copperValue / 10;
 		},
 
-		// SF2e stores credits as the price of credstick items, so they are exposed as an attribute instead. Writes to this path are
-		// intercepted by patchSf2eCurrencyUpdates below.
+		// This function is an optional system handler that handles attribute changes that can't be saved with a regular update.
+		// The credits path is not part of the actor schema, so apply it through the SF2e inventory API so it is properly handled.
+		"ATTRIBUTE_UPDATE_HANDLER": async (document, changes) => {
+			if (!(SF2E_CREDITS_PATH in changes) || !document.inventory) return changes;
+
+			const delta = Math.max(0, Math.floor(Number(changes[SF2E_CREDITS_PATH]) || 0)) - document.inventory.currency.credits;
+			if (delta > 0) await document.inventory.addCurrency({ credits: delta });
+			else if (delta < 0) await document.inventory.removeCurrency({ credits: -delta }, { byValue: false });
+
+			delete changes[SF2E_CREDITS_PATH];
+			return changes;
+		},
+
+		// SF2e stores credits as the price of credstick items, so they are exposed as an attribute instead
 		"CURRENCIES": [
 			{
 				type: "attribute",
@@ -195,7 +207,6 @@ Hooks.once("item-piles-ready", async () => {
 		await game.itempiles.API.addSystemIntegration(pf2eData);
 	}
 	else if (game.system.id === 'sf2e') {
-		patchSf2eCurrencyUpdates();
 		registerSf2eCurrencyRefresh();
 		registerSf2eCredstickDropMessage();
 		await game.itempiles.API.addSystemIntegration(sf2eData);
@@ -215,47 +226,8 @@ function registerSf2eCredstickDropMessage() {
 	});
 }
 
-// Item Piles writes attribute currencies with actor.update({ [path]: newTotal }). This path is not part of the actor schema,
-// so the data doesn't get committed to the actor. So instead we will pull it out before the update and apply it through the
-// SF2e inventory API instead.
+// SF2e exposes the actor's total credits through this inventory getter, which is used as the credits attribute currency
 const SF2E_CREDITS_PATH = "inventory.currency.credits";
-
-function patchSf2eCurrencyUpdates() {
-	// libWrapper lets this wrapper coexist with other modules wrapping the same method, and reports any conflicts
-	if (game.modules.get("lib-wrapper")?.active) {
-		libWrapper.register("itempiles-pf2e", "CONFIG.Actor.documentClass.prototype.update", sf2eCurrencyUpdateWrapper, "MIXED");
-		return;
-	}
-
-	const ActorClass = CONFIG.Actor.documentClass;
-	const originalUpdate = ActorClass.prototype.update;
-	ActorClass.prototype.update = function (...args) {
-		return sf2eCurrencyUpdateWrapper.call(this, originalUpdate.bind(this), ...args);
-	};
-}
-
-// Passes every update through untouched unless it sets the credits path
-async function sf2eCurrencyUpdateWrapper(wrapped, data = {}, operation = {}) {
-	if (!this.inventory || foundry.utils.getType(data) !== "Object") {
-		return wrapped(data, operation);
-	}
-
-	// Item Piles may send the path either as a dotted key or as nested objects
-	const newCredits = SF2E_CREDITS_PATH in data ? data[SF2E_CREDITS_PATH] : foundry.utils.getProperty(data, SF2E_CREDITS_PATH);
-	if (newCredits === undefined) return wrapped(data, operation);
-
-	const delta = Math.max(0, Math.floor(Number(newCredits) || 0)) - this.inventory.currency.credits;
-	if (delta > 0) await this.inventory.addCurrency({ credits: delta });
-	else if (delta < 0) await this.inventory.removeCurrency({ credits: -delta }, { byValue: false });
-
-	// Pass on the rest of the update, if there is anything left
-	const remaining = foundry.utils.deepClone(data);
-	delete remaining[SF2E_CREDITS_PATH];
-	delete remaining.inventory?.currency?.credits;
-	if (remaining.inventory?.currency && foundry.utils.isEmpty(remaining.inventory.currency)) delete remaining.inventory.currency;
-	if (remaining.inventory && foundry.utils.isEmpty(remaining.inventory)) delete remaining.inventory;
-	return foundry.utils.isEmpty(remaining) ? this : wrapped(remaining, operation);
-}
 
 // Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e credit changes only touch
 // credstick items. So we need to refresh the credit totals when these items change.
