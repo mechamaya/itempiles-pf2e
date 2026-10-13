@@ -207,7 +207,6 @@ Hooks.once("item-piles-ready", async () => {
 		await game.itempiles.API.addSystemIntegration(pf2eData);
 	}
 	else if (game.system.id === 'sf2e') {
-		registerSf2eCurrencyRefresh();
 		registerSf2eCredstickDropMessage();
 		await game.itempiles.API.addSystemIntegration(sf2eData);
 	}
@@ -228,27 +227,3 @@ function registerSf2eCredstickDropMessage() {
 
 // SF2e exposes the actor's total credits through this inventory getter, which is used as the credits attribute currency
 const SF2E_CREDITS_PATH = "inventory.currency.credits";
-
-// Item Piles refreshes attribute currencies when an actor update contains their path, but SF2e credit changes only touch
-// credstick items. So we need to refresh the credit totals when these items change.
-function registerSf2eCurrencyRefresh() {
-	const pendingRefreshes = new Map();
-
-	const refreshCredits = (item) => {
-		const actor = item.parent;
-		if (!(actor instanceof Actor) || item.type !== "treasure" || item.system.category !== "credstick") return;
-
-		// A single credits change can create, update and delete several credsticks, so only refresh once per actor
-		if (pendingRefreshes.has(actor.uuid)) return;
-		pendingRefreshes.set(actor.uuid, setTimeout(() => {
-			pendingRefreshes.delete(actor.uuid);
-			const data = {};
-			foundry.utils.setProperty(data, SF2E_CREDITS_PATH, actor.inventory?.currency.credits ?? 0);
-			actor.render(false, { action: "update", data });
-		}));
-	};
-
-	Hooks.on("createItem", refreshCredits);
-	Hooks.on("updateItem", refreshCredits);
-	Hooks.on("deleteItem", refreshCredits);
-}
